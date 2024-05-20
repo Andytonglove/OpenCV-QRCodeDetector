@@ -1,0 +1,14 @@
+requirements.txt
+opencv-python>=4.5.1
+opencv-contrib-python>=4.5.1
+
+1. python qr_recognition.py # 效果不错，可以同时识别多个+划线标注打印，相当于检测+定位
+2. python sample_WeChatQRCode_detectAndDecode.py # 使用微信库，效果不错，但一次只能识别一个
+3. python sample_QRCodeDetector_detectAndDecodeMulti.py # 另外写的，也能一次识别多个
+4. python wechatDetectQR_test.py # 使用微信库，一次可以识别多个的，自己写的
+
+终极版本：支持摄像头、图片、文件夹，支持多个二维码识别，支持保存识别结果到图片和txt文件：
+python QRCode_WeChatdetectAndDecode.py
+python QRCode_WeChatdetectAndDecode.py --input image.png --output image1_res.jpg --save-txt image1_res.txt
+python QRCode_WeChatdetectAndDecode.py --input-dir images_test
+
