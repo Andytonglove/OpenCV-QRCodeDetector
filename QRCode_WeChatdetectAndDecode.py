@@ -266,7 +266,7 @@ def process_directory(input_dir, save_txt_path):
     seen_qrcodes = set()
 
     if save_txt_path:
-        txt_file = open(save_txt_path, "w")
+        txt_file = open(save_txt_path, "w", encoding="utf-8")
     else:
         txt_file = None
 
@@ -277,7 +277,15 @@ def process_directory(input_dir, save_txt_path):
             if image is None:
                 continue
 
-            result = qrcode_detector.detectAndDecode(image)
+            # UnicodeDecodeError: 'utf-8' codec can't decode byte ...
+            # result = qrcode_detector.detectAndDecode(image)
+
+            try:
+                result = qrcode_detector.detectAndDecode(image)
+            except UnicodeDecodeError:
+                print("UnicodeDecodeError encountered. Continuing...")
+                result = None
+                continue
 
             for text in result[0]:
                 if text and text not in seen_qrcodes:
