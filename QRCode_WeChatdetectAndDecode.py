@@ -300,6 +300,7 @@ def process_directory(input_dir, save_txt_path):
             cv.imwrite(output_image_path, debug_image)
 
     if txt_file:
+        txt_file.write(f"Total QR Codes detected: {len(seen_qrcodes)}\n")
         txt_file.close()
 
     print(f"Total QR Codes detected: {len(seen_qrcodes)}")
