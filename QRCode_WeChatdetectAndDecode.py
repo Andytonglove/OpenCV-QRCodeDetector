@@ -6,6 +6,7 @@ import argparse
 
 import cv2 as cv
 import os
+from pyzbar import pyzbar  # 导入pyzbar库
 
 print(cv.__version__)
 
@@ -21,7 +22,7 @@ def get_args():
         "--output",
         type=str,
         help="path to save output image or video file",
-        default="output.avi",
+        default="output.jpg",  # 默认输出文件名.avi也可
     )
     parser.add_argument(
         "--save-txt",
@@ -36,6 +37,19 @@ def get_args():
     args = parser.parse_args()
 
     return args
+
+
+# 通过pyzbar库识别二维码
+def decode_qrcode_with_pyzbar(image):
+    decoded_objects = pyzbar.decode(image)
+    qrcodes = []
+    points = []
+
+    for obj in decoded_objects:
+        qrcodes.append(obj.data.decode("utf-8"))
+        points.append([(int(point.x), int(point.y)) for point in obj.polygon])
+
+    return qrcodes, points
 
 
 def main():
@@ -111,6 +125,8 @@ def main():
 
         # 实现检测 #############################################################
         result = qrcode_detector.detectAndDecode(image)
+        if not result[0]:  # 如果没有检测到二维码，使用pyzbar再试一次
+            result = decode_qrcode_with_pyzbar(image)
 
         # 每一帧的统计 #########################################################
         current_qrcodes.clear()
@@ -282,6 +298,8 @@ def process_directory(input_dir, save_txt_path):
 
             try:
                 result = qrcode_detector.detectAndDecode(image)
+                if not result[0]:  # 如果没有检测到二维码，使用pyzbar再试一次
+                    result = decode_qrcode_with_pyzbar(image)
             except UnicodeDecodeError:
                 print("UnicodeDecodeError encountered. Continuing...")
                 result = None
