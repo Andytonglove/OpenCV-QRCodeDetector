@@ -52,6 +52,17 @@ def decode_qrcode_with_pyzbar(image):
     return qrcodes, points
 
 
+def apply_filter(image):
+    # 可以根据需要选择不同的滤波方法
+    # 高斯滤波
+    filtered_image = cv.GaussianBlur(image, (5, 5), 0)
+    # 中值滤波
+    # filtered_image = cv.medianBlur(image, 5)
+    # 双边滤波
+    # filtered_image = cv.bilateralFilter(image, 9, 75, 75)
+    return filtered_image
+
+
 def main():
     # 参数解析 #################################################################
     args = get_args()
@@ -122,6 +133,9 @@ def main():
         if not ret:
             break
         debug_image = copy.deepcopy(image)
+
+        # 应用滤波器 ###########################################################
+        # filtered_image = apply_filter(image)
 
         # 实现检测 #############################################################
         result = qrcode_detector.detectAndDecode(image)
