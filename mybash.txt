@@ -12,3 +12,16 @@ python QRCode_WeChatdetectAndDecode.py
 python QRCode_WeChatdetectAndDecode.py --input image.png --output image1_res.jpg --save-txt image1_res.txt
 python QRCode_WeChatdetectAndDecode.py --input-dir images_test
 
+huggingface-test
+
+生成二维码
+amzqr https://github.com -n github_qr.jpg  -d .
+
+如果要用一个脚本，循环生成大量二维码，即是：
+for i in {1..100}; do amzqr https://github.com -n github_qr_$i.jpg  -d .; done
+
+显示器分辨率：1920*1080
+显示器显示二维码横向7个 纵向4个（不含同步码）
+故而一个二维码的分辨率约为260*260
+手机拍摄视频分辨率1920*1080
+经验公式是10:1扫描距离：二维码大小
