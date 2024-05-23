@@ -7,6 +7,7 @@ import argparse
 import cv2 as cv
 import os
 from pyzbar import pyzbar  # 导入pyzbar库
+import numpy as np
 
 print(cv.__version__)
 
@@ -52,43 +53,41 @@ def decode_qrcode_with_pyzbar(image):
     return qrcodes, points
 
 
-def apply_filter(image):
-    # 可以根据需要选择不同的滤波方法
-    # 高斯滤波
-    filtered_image = cv.GaussianBlur(image, (5, 5), 0)
+# 预处理图像
+def preprocess_image(image):
+    # 转换为灰度图像
+    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+
+    # 应用自适应直方图均衡化（CLAHE）
+    clahe = cv.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    equalized = clahe.apply(gray)
+
+    # 应用伽马校正
+    gamma = 1.2
+    lookUpTable = np.empty((1, 256), np.uint8)
+    for i in range(256):
+        lookUpTable[0, i] = np.clip(pow(i / 255.0, gamma) * 255.0, 0, 255)
+    gamma_corrected = cv.LUT(equalized, lookUpTable)
+
+    # 应用高斯模糊
+    blurred = cv.GaussianBlur(gamma_corrected, (5, 5), 0)
     # 中值滤波
     # filtered_image = cv.medianBlur(image, 5)
     # 双边滤波
     # filtered_image = cv.bilateralFilter(image, 9, 75, 75)
-    return filtered_image
 
-
-# 一些其他处理，未使用
-def apply_adaptive_threshold(image):
-    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-    thresholded_image = cv.adaptiveThreshold(
-        gray, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2
+    # 自适应阈值
+    adaptive_thresh = cv.adaptiveThreshold(
+        blurred, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2
     )
-    return thresholded_image
 
+    # 光照补偿：使用顶帽变换和黑帽变换
+    kernel = cv.getStructuringElement(cv.MORPH_RECT, (15, 15))
+    top_hat = cv.morphologyEx(gray, cv.MORPH_TOPHAT, kernel)
+    black_hat = cv.morphologyEx(gray, cv.MORPH_BLACKHAT, kernel)
+    compensated = cv.add(cv.subtract(gray, black_hat), top_hat)
 
-def apply_histogram_equalization(image):
-    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-    equalized_image = cv.equalizeHist(gray)
-    return cv.cvtColor(equalized_image, cv.COLOR_GRAY2BGR)
-
-
-def multi_scale_detection(image, qrcode_detector):
-    scales = [1.0, 1.5, 2.0]
-    all_results = []
-
-    for scale in scales:
-        resized_image = cv.resize(image, None, fx=scale, fy=scale)
-        result = qrcode_detector.detectAndDecode(resized_image)
-        if result[0]:
-            all_results.append(result)
-
-    return all_results
+    return compensated
 
 
 def main():
@@ -163,7 +162,7 @@ def main():
         debug_image = copy.deepcopy(image)
 
         # 应用滤波器 ###########################################################
-        # filtered_image = apply_filter(image)
+        # filtered_image = preprocess_image(image)
 
         # 实现检测 #############################################################
         result = qrcode_detector.detectAndDecode(image)
@@ -335,7 +334,7 @@ def process_directory(input_dir, save_txt_path):
             if image is None:
                 continue
 
-            # filtered_image = apply_filter(image)
+            # filtered_image = preprocess_image(image)
 
             # UnicodeDecodeError: 'utf-8' codec can't decode byte ...
             # result = qrcode_detector.detectAndDecode(image)
