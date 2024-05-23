@@ -63,6 +63,34 @@ def apply_filter(image):
     return filtered_image
 
 
+# 一些其他处理，未使用
+def apply_adaptive_threshold(image):
+    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    thresholded_image = cv.adaptiveThreshold(
+        gray, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2
+    )
+    return thresholded_image
+
+
+def apply_histogram_equalization(image):
+    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    equalized_image = cv.equalizeHist(gray)
+    return cv.cvtColor(equalized_image, cv.COLOR_GRAY2BGR)
+
+
+def multi_scale_detection(image, qrcode_detector):
+    scales = [1.0, 1.5, 2.0]
+    all_results = []
+
+    for scale in scales:
+        resized_image = cv.resize(image, None, fx=scale, fy=scale)
+        result = qrcode_detector.detectAndDecode(resized_image)
+        if result[0]:
+            all_results.append(result)
+
+    return all_results
+
+
 def main():
     # 参数解析 #################################################################
     args = get_args()
@@ -306,6 +334,8 @@ def process_directory(input_dir, save_txt_path):
             image = cv.imread(image_path)
             if image is None:
                 continue
+
+            # filtered_image = apply_filter(image)
 
             # UnicodeDecodeError: 'utf-8' codec can't decode byte ...
             # result = qrcode_detector.detectAndDecode(image)
