@@ -1,4 +1,5 @@
 import sys
+import numpy as np
 import qrcode
 from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QGridLayout
 from PyQt5.QtGui import QPixmap, QImage
@@ -10,15 +11,15 @@ from qrcode.image.pil import PilImage
 import base64
 import multiprocessing
 import gzip
-
+import cv2
 
 QRCODE_NUMBER = 28
 QRCODE_SIZE = 5
 CHUNK_SIZE = 128
-FRAME_RATE = 10
+FRAME_RATE = 5  # 帧率为每秒10帧
 QR_CODE_NUMBER_PER_ROW = 7
 FILE_NAME = "image.png"
-
+VIDEO_FILE_NAME = "qrcode_video.avi"
 
 chunks = []
 frames_number = 0
@@ -164,6 +165,15 @@ class QRCodeWidget(QWidget):
         self.initUI()
         self.showFullScreen()
 
+        # Initialize video writer
+        first_qr_image = generate_qr(b"Start").convert("RGB")
+        self.video_writer = cv2.VideoWriter(
+            VIDEO_FILE_NAME,
+            cv2.VideoWriter_fourcc(*"XVID"),
+            FRAME_RATE,
+            first_qr_image.size,
+        )
+
     def display_first_frame_func(self):
         self.display_first_frame_timer.stop()
         self.timer = QTimer(self)
@@ -181,6 +191,7 @@ class QRCodeWidget(QWidget):
 
     def timer_finished_func(self):
         self.close()
+        self.video_writer.release()
         exit()
 
     def initUI(self):
@@ -226,6 +237,11 @@ class QRCodeWidget(QWidget):
                 )
                 pixmap = QPixmap.fromImage(qt_img)
                 label.setPixmap(pixmap)
+
+            # Convert PIL image to OpenCV format and write to video file
+            if img:
+                open_cv_image = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+                self.video_writer.write(open_cv_image)
 
         if curent_frame == -1:
             self.timer.stop()
