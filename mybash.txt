@@ -11,6 +11,7 @@ opencv-contrib-python>=4.5.1
 python QRCode_WeChatdetectAndDecode.py
 python QRCode_WeChatdetectAndDecode.py --input image.png --output image1_res.jpg --save-txt image1_res.txt
 python QRCode_WeChatdetectAndDecode.py --input-dir images_test
+python QRCode_WeChatdetectAndDecode.py --input qrcode-file-tx-main/qrcode_video.mp4 --output qrcode-file-tx-main/qrcode_video_res.mp4 --save-txt qrcode-file-tx-main/result.txt
 增加滤波后效果反而不如之前的
 
 huggingface-test
