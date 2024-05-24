@@ -90,6 +90,15 @@ def preprocess_image(image):
     return compensated
 
 
+def super_res(image):
+    # 使用OpenCV的DNN超分辨率模型
+    sr = cv.dnn_superres.DnnSuperResImpl_create()
+    sr.readModel("model/ESRGAN_x4.pb")
+    sr.setModel("esrgan", 4)
+    result = sr.upsample(image)
+    return result
+
+
 def main():
     # 参数解析 #################################################################
     args = get_args()
