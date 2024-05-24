@@ -98,8 +98,11 @@ def pyzxing_decode(image):
     # 返回格式和pyzbar一样
     qrcodes = [item.get("parsed") for item in results]
     points = [item.get("points") for item in results]
-    # qrcodes中的内容是字节串，需要解码为字符串，注意解码
-    qrcodes = [qrcode.decode("utf-8", errors="replace") for qrcode in qrcodes]
+    # # qrcodes中的内容是字节串，需要解码为字符串，注意解码
+    # qrcodes = [
+    #     qrcode.decode("utf-8", errors="replace") if qrcode is not None else ""
+    #     for qrcode in qrcodes
+    # ]
 
     return qrcodes, points
 
@@ -229,9 +232,9 @@ def main():
         # 实现检测 #############################################################
         result = qrcode_detector.detectAndDecode(image)
         if not result[0]:  # 如果没有检测到二维码，使用pyzbar再试一次
-            # result = decode_qrcode_with_pyzbar(image)
+            result = decode_qrcode_with_pyzbar(image)
             # TODO: 增加pyzxing库识别二维码
-            result = pyzxing_decode(image)
+            # result = pyzxing_decode(image)
 
         # 每一帧的统计 #########################################################
         current_qrcodes.clear()

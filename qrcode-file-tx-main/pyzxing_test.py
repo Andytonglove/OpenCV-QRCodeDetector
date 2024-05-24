@@ -47,7 +47,10 @@ def pyzxing_decode(image):
     qrcodes = [item.get("parsed") for item in results]
     points = [item.get("points") for item in results]
     # qrcodes中的内容是字节串，需要解码为字符串，但UnicodeDecodeError: 'utf-8' codec can't decode byte 0xef in position 3: invalid continuation byte
-    qrcodes = [qrcode.decode("utf-8", errors="replace") for qrcode in qrcodes]
+    # qrcodes = [
+    #     qrcode.decode("utf-8", errors="replace") if qrcode is not None else ""
+    #     for qrcode in qrcodes
+    # ]
     return qrcodes, points
 
 
