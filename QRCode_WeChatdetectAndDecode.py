@@ -90,11 +90,12 @@ def preprocess_image(image):
     return compensated
 
 
+# 超分辨率，效果不好
 def super_res(image):
     # 使用OpenCV的DNN超分辨率模型
     sr = cv.dnn_superres.DnnSuperResImpl_create()
-    sr.readModel("model/ESRGAN_x4.pb")
-    sr.setModel("esrgan", 4)
+    sr.readModel("model/ESPCN_x3.pb")
+    sr.setModel("espcn", 3)
     result = sr.upsample(image)
     return result
 
@@ -172,6 +173,7 @@ def main():
 
         # 应用滤波器 ###########################################################
         # filtered_image = preprocess_image(image)
+        # super_res_image = super_res(image)
 
         # 实现检测 #############################################################
         result = qrcode_detector.detectAndDecode(image)
