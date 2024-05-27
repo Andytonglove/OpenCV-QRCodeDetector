@@ -1,0 +1,31 @@
+# codeworkspace
+projects=>YOLO + track
+
+1.yolo：学校的yolo测试命令行项目，有一个众源数据集
+2.yolo_tracking：原始的yolov8+各种reid方案的tracking，未修改，命令行，BoxMOT
+
+3.Yolov5_DeepSort_Pytorch：没跑通，有一些存的pt
+4.yolov5_deepsort：paddle环境，可以跑通检测+方向预测，主要是帧保存：A multi-task(detection, tracking, dense estimation, object counting) frame-work based on yolov5+deepsort。
+
+
+5.Yolov5_DeepSort_Traffic-counter-main：可以跑通横线检测，双竖线一出一入 
+6.yolov5_distance_count：测距的，双目摄像头要算参数的
+7.Yolov5-Deepsort-Fastreid-main：没跑通，只能检测一种，需要加tracker
+
+
+8.yolov8_tracking
+9:YOLOv8-DeepSORT-Object-Tracking：可以，有漂亮的尾迹，记录单横线上下的，记录信息和多类别。效果不错。
+10.yolov8-deepsort-tracking-main：可以，yolov8环境，主要是gradio一个教学，其框框做的不好，已经把gradio集成到yolov5-deepsort里面了。
+11.yolov8-stereo：yolov8+双目视觉测距的参考
+
+
++.yolov5-deepsort-pedestraintracking-master：一个记录行人计数的方案。画框的ui不错，功能偏少，效果偏差。
++.yolov5_deepsort_counting_win10-main：计算量有点大跑不动，实现了折线号码计算和计数。
++.yolov4-deepsort-vehicles-counting-main：一个yolov4的看起来很完善的系统，但是有点难配置。
++.StrongSORT-YOLO：strongsort系列的模型，尝试一下，功能很全。strongsort在人少的时候效果好，人多复杂连线的时候对比deepsort效果偏差。
++.Yolov8-UCMCTrack-DeepSort-MOT-main：一个很棒的ui，配不起来，qt那边有问题
+
+
++：1、进行二维码的提取和识别训练（复现）；2、进行原始室外YOLO模型训练与得出
+二维码检测识别
+OpenCV-QRCodeDetector-Sample-main中集合
