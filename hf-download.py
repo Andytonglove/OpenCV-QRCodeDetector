@@ -6,6 +6,13 @@ import os
 # geochat跑在服务器上，0000直接换成地址即可，配置时文件夹地址要改成MBZUAI/geochat-7B
 # 例如http://0.0.0.0:7860 => http://125.220.157.228:7860/
 
+# cuda配置：export CUDA_HOME=/usr/local/cuda
+
+# 服务器：需要用武大vpn（atrust做一跳）
+# 服务器：125.220.157.228
+# machine
+# abc!@#$%^&*()
+
 """
 1. conda activate gc (或者geochat环境)
 2. python geochat_demo.py --model-path MBZUAI/geochat-7B/
