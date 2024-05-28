@@ -19,6 +19,7 @@ This is a QRCode detector and decoder using OpenCV and WeChatCV, used to detect 
 # Others
 1. huggingface project
 2. data-analysis project
+3. yolo-tracking project
 
 # Requirement 
 * opencv-python>=4.5.1
