@@ -137,9 +137,6 @@ def process_directory():
     input_dir = request.form.get("input_dir")
     save_txt_path = request.form.get("save_txt_path")
 
-    if not input_dir or not os.path.isdir(input_dir):
-        return jsonify({"error": "Invalid directory"}), 400
-
     qrcode_detector = cv.wechat_qrcode_WeChatQRCode(
         "model/detect.prototxt",
         "model/detect.caffemodel",
@@ -161,13 +158,9 @@ def process_directory():
             if image is None:
                 continue
 
-            try:
-                result = qrcode_detector.detectAndDecode(image)
-                if not result[0]:
-                    result = decode_qrcode_with_pyzbar(image)
-            except UnicodeDecodeError:
-                print("UnicodeDecodeError encountered. Continuing...")
-                continue
+            result = qrcode_detector.detectAndDecode(image)
+            if not result[0]:  # 如果没有检测到二维码，使用pyzbar再试一次
+                result = decode_qrcode_with_pyzbar(image)
 
             for text in result[0]:
                 if text and text not in seen_qrcodes:
