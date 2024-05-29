@@ -168,6 +168,10 @@ def main():
 
     cap = None  # 初始化cap
 
+    # 抽帧参数
+    frame_skip = 5  # 每隔5帧处理一次
+    frame_count = 0  # 初始化帧计数器
+
     # 相机准备 #################################################################
     if input_dir:
         if not os.path.isdir(input_dir):
@@ -218,6 +222,9 @@ def main():
 
     while True:
         start_time = time.time()
+
+        # 只在每隔 frame_skip 帧时处理图像
+        # if frame_count % frame_skip == 0:
 
         # 捕捉相机 #############################################################
         ret, image = cap.read()
@@ -281,6 +288,9 @@ def main():
 
         # 画面展示 #############################################################
         cv.imshow("QR Code Detector", debug_image)
+
+        # 增加帧计数器
+        # frame_count += 1
 
     cap.release()
     if input_path and out:
