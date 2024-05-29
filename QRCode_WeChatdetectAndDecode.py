@@ -30,7 +30,7 @@ def get_args():
     parser.add_argument(
         "--save-txt",
         type=str,
-        default="result.txt",
+        # default="result.txt",
         help="path to save recognized QR code texts",
     )
     parser.add_argument(
@@ -195,6 +195,7 @@ def main():
 
     # Detector准备 #############################################################
     qrcode_detector = cv.wechat_qrcode_WeChatQRCode(
+        # detect模型 + sr超分模型
         "model/detect.prototxt",
         "model/detect.caffemodel",
         "model/sr.prototxt",
@@ -240,7 +241,7 @@ def main():
         result = qrcode_detector.detectAndDecode(image)
         if not result[0]:  # 如果没有检测到二维码，使用pyzbar再试一次
             result = decode_qrcode_with_pyzbar(image)
-            # TODO: 增加pyzxing库识别二维码
+            # TODO: 增加pyzxing库识别二维码，可加三次优化四次识别
             # result = pyzxing_decode(image)
 
         # 每一帧的统计 #########################################################
