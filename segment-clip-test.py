@@ -129,18 +129,56 @@ def main():
         cv2.destroyAllWindows()
 
 
+# 为gradio使用
+def grad_detector(image, prompt="QR code"):
+    # 准备输入
+    inputs = processor(
+        text=[prompt], images=[image], padding="max_length", return_tensors="pt"
+    )
+
+    with torch.no_grad():
+        outputs = model(**inputs)
+
+    # 获取分割结果
+    preds = torch.nn.functional.interpolate(
+        outputs.logits.unsqueeze(1),
+        size=(image.shape[0], image.shape[1]),
+        mode="bilinear",
+    )
+
+    # 转换为掩码
+    preds = torch.sigmoid(preds).squeeze().cpu().numpy()
+    mask = (preds > 0.5).astype(np.uint8) * 255
+
+    # 将mask转换为彩色图像
+    colored_mask = cv2.applyColorMap(mask, cv2.COLORMAP_JET)
+
+    # 叠加图像和掩码
+    annotated_image = cv2.addWeighted(image, 0.5, colored_mask, 0.5, 0)
+
+    # 查找mask中的所有独立轮廓
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    detected_codes = [
+        f"QR Code {i+1}: {cv2.contourArea(contour)} pixels"
+        for i, contour in enumerate(contours)
+    ]
+
+    return annotated_image, "\n".join(detected_codes)
+
+
 if __name__ == "__main__":
     main()
+    # python segment-clip-test.py --image image3.jpg
 
-    # 一个gradio实例
-    # interface = gr.Interface(
-    #     fn=detect_qr_code,
-    #     inputs="image",
-    #     outputs=[
-    #         gr.Image(type="numpy", label="Annotated Image"),
-    #         gr.Textbox(label="Detected QR Codes"),
-    #     ],
-    #     title="QR Code Segmentation",
-    #     description="Segment QR Codes from Images",
-    # )
+    # 一个gradio实例，效果远差于命令行版本
+    interface = gr.Interface(
+        fn=grad_detector,
+        inputs=gr.Image(type="numpy", label="Upload an image"),
+        outputs=[
+            gr.Image(type="numpy", label="Annotated Image"),
+            gr.Textbox(label="Detected QR Codes"),
+        ],
+        title="QR Code Segmentation",
+        description="Segment QR Codes from Images",
+    )
     # interface.launch()
