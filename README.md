@@ -99,6 +99,7 @@ D\_max =0.00726/(2×tan(53.13/2)) ≈0.00726meters ≈7.75meters
 1. huggingface project
 2. data-analysis project
 3. yolo-tracking project
+4. segment-clip : using clip to segment QR codes from images
 
 
 # Reference
