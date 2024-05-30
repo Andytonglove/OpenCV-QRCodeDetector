@@ -5,6 +5,8 @@ import torch
 from transformers import CLIPSegProcessor, CLIPSegForImageSegmentation
 from PIL import Image
 
+import gradio as gr
+
 # 初始化模型和处理器
 processor = CLIPSegProcessor.from_pretrained("CIDAS/clipseg-rd64-refined")
 model = CLIPSegForImageSegmentation.from_pretrained("CIDAS/clipseg-rd64-refined")
@@ -89,7 +91,7 @@ def solo_crop_to_mask(image, mask, padding=10):
     return cropped_images
 
 
-if __name__ == "__main__":
+def main():
     args = get_args()
     prompt = args.prompt
     image_path = args.image
@@ -125,3 +127,20 @@ if __name__ == "__main__":
 
         cv2.waitKey(0)
         cv2.destroyAllWindows()
+
+
+if __name__ == "__main__":
+    main()
+
+    # 一个gradio实例
+    # interface = gr.Interface(
+    #     fn=detect_qr_code,
+    #     inputs="image",
+    #     outputs=[
+    #         gr.Image(type="numpy", label="Annotated Image"),
+    #         gr.Textbox(label="Detected QR Codes"),
+    #     ],
+    #     title="QR Code Segmentation",
+    #     description="Segment QR Codes from Images",
+    # )
+    # interface.launch()
