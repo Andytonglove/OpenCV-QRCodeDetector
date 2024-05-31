@@ -32,7 +32,7 @@ make sure you have model and relevant packages installed.
 - python QRCode_WeChatdetectAndDecode.py --input image.png --output image_res.jpg --save-txt image_res.txt
 - python QRCode_WeChatdetectAndDecode.py --input-dir images_test
 - python QRCode_WeChatdetectAndDecode.py --input qrcode_video.mp4 --output qrcode_video_res.mp4 --save-txt result.txt
-
+- python segment-clip-test.py --image image1.jpg
 
 #### Conditions
 
