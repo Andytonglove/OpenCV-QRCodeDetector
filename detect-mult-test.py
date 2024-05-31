@@ -363,3 +363,5 @@ def main():
 if __name__ == "__main__":
     main()
     # python detect-mult-test.py --input image1.png
+
+    # TODO: 结束后开一个gradio界面
