@@ -247,6 +247,38 @@ def solo_crop_to_mask(image, mask, padding=10):
     return cropped_images
 
 
+# TODO: 第三次识别函数
+def preprocess_for_qr(image):
+    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    clahe = cv.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    equalized = clahe.apply(gray)
+    gamma = 1.2
+    lookUpTable = np.empty((1, 256), np.uint8)
+    for i in range(256):
+        lookUpTable[0, i] = np.clip(pow(i / 255.0, gamma) * 255.0, 0, 255)
+    gamma_corrected = cv.LUT(equalized, lookUpTable)
+    blurred = cv.GaussianBlur(gamma_corrected, (5, 5), 0)
+    adaptive_thresh = cv.adaptiveThreshold(
+        blurred, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2
+    )
+    return adaptive_thresh
+
+
+def second_stage_detection(cropped_images):
+    second_stage_qrcodes = set()
+    for cropped_image in cropped_images:
+        preprocessed_image = preprocess_for_qr(cropped_image)
+        # 使用不同的方法进行识别
+        qrcodes_pyzbar, _ = decode_qrcode_with_pyzbar(preprocessed_image)
+        qrcodes_pyzxing, _ = pyzxing_decode(preprocessed_image)
+
+        # 合并结果
+        second_stage_qrcodes.update(qrcodes_pyzbar)
+        second_stage_qrcodes.update(qrcodes_pyzxing)
+
+    return second_stage_qrcodes
+
+
 def main():
     args = get_args()
     input_path = args.input
@@ -299,6 +331,33 @@ def main():
     # TODO: Step 3: 对裁剪后提取的做二次识别，考虑效果策略
     maybe_ignore_cnt = len(solo_cropped_images) - cnt_qrcodes
     print(f"Maybe ignore QR Codes: {maybe_ignore_cnt if maybe_ignore_cnt > 0 else 0}.")
+
+    # 做二次识别
+    print("\n")
+    sec_cnt_qrcodes = 0
+    sec_seen_qrcodes = set()
+    sec_current_qrcodes = set()
+
+    second_stage_qrcodes = second_stage_detection(solo_cropped_images)
+    for text in second_stage_qrcodes:
+        if text:
+            sec_cnt_qrcodes += 1
+            sec_current_qrcodes.add(text)
+            if text not in sec_seen_qrcodes:
+                sec_seen_qrcodes.add(text)
+                print(f"New QR Code detected in second stage: {text}")
+            else:
+                print(f"Old QR Code detected in second stage: {text}")
+
+    # 对两个set执行去重，merge
+    all_detected_qrcodes = seen_qrcodes.union(sec_seen_qrcodes)
+    print(all_detected_qrcodes)
+
+    sec_new_detect = len(sec_seen_qrcodes) - len(seen_qrcodes)
+    if sec_new_detect > 0:
+        print(f"New QR Code detected in second stage: {sec_new_detect}")
+    else:
+        print(f"No new QR Code detected in second stage, cnt = {sec_new_detect}")
 
 
 if __name__ == "__main__":
