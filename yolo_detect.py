@@ -42,7 +42,7 @@ def build_model(is_cuda):
     - net (cv2.dnn_Net): The configured YOLO model.
 
     """
-    net = cv2.dnn.readNet("best.onnx")
+    net = cv2.dnn.readNet("model/best.onnx")
     if is_cuda:
         print("Attempting to use CUDA")
         net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
@@ -201,6 +201,8 @@ def process_image(image_path):
 
     class_ids, confidences, boxes = wrap_detection(inputImage, outs[0])
 
+    qr_regions = []
+
     for classid, confidence, box in zip(class_ids, confidences, boxes):
         color = colors[int(classid) % len(colors)]
         cv2.rectangle(frame, box, color, 2)
@@ -215,13 +217,22 @@ def process_image(image_path):
             0.5,
             (0, 0, 0),
         )
+        # Extract the QR code region and save it to the list
+        qr_region = frame[box[1] : box[1] + box[3], box[0] : box[0] + box[2]]
+        qr_regions.append(qr_region)
 
     cv2.imshow("output", frame)
-    cv2.waitKey(10000)
+
+    # 对保存到qr_regions的QR码区域进行展示
+    for i, qr_region in enumerate(qr_regions):
+        # 同时展示所有的QR码区域
+        cv2.imshow("QR Region " + str(i), qr_region)
+
+    cv2.waitKey(0)
     cv2.destroyAllWindows()
 
 
-def process_video(video_path):
+def process_video(video_path, output_path="output.mp4"):
     colors = [(255, 255, 0), (0, 255, 0), (0, 255, 255), (255, 0, 0)]
 
     is_cuda = len(sys.argv) > 1 and sys.argv[1] == "cuda"
@@ -229,10 +240,19 @@ def process_video(video_path):
     net = build_model(is_cuda)
     capture = load_capture(video_path)
 
+    # Get video properties
+    width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = int(capture.get(cv2.CAP_PROP_FPS))
+
+    # Initialize video writer
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+
     start = time.time_ns()
     frame_count = 0
     total_frames = 0
-    fps = -1
+    # fps = -1
 
     while True:
 
@@ -278,11 +298,18 @@ def process_video(video_path):
 
         cv2.imshow("output", frame)
 
+        # Write the frame to the output video file
+        out.write(frame)
+
         if cv2.waitKey(1) > -1:
             print("finished by user")
             break
 
     print("Total frames: " + str(total_frames))
+
+    out.release()  # Release the VideoWriter
+    print("Output video saved to: " + output_path)
+
     capture.release()
     cv2.destroyAllWindows()
 
@@ -293,7 +320,10 @@ if __name__ == "__main__":
         if args.input.endswith(".jpg") or args.input.endswith(".png"):
             process_image(args.input)
         elif args.input.endswith(".mp4") or args.input.endswith(".avi"):
-            process_video(args.input)
+            if args.output:
+                process_video(args.input, args.output)
+            else:
+                process_video(args.input)
         else:
             print("Invalid file type. Supported types: jpg, png, mp4, avi")
     else:
