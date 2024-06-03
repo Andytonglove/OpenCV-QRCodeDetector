@@ -44,6 +44,7 @@ def get_args():
 
 # 通过pyzbar库识别二维码
 def decode_qrcode_with_pyzbar(image):
+    # 给pyzbar增加一个断言参数，防止出错？ymbols=[pyzbar.ZBarSymbol.QRCODE]
     decoded_objects = pyzbar.decode(image)
     qrcodes = []
     points = []

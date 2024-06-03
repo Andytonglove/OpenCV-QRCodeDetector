@@ -326,7 +326,7 @@ def main():
 
         if output_path:
             print(f"Output path of overlay_image: {output_path}. No saving this time.")
-            # cv.imwrite(output_path, overlay_image)
+            cv.imwrite(output_path, overlay_image)
 
     # TODO: Step 3: 对裁剪后提取的做二次识别，考虑效果策略
     maybe_ignore_cnt = len(solo_cropped_images) - cnt_qrcodes
