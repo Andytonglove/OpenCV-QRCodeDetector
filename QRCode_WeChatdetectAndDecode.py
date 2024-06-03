@@ -11,6 +11,11 @@ import numpy as np
 from pyzbar import pyzbar  # 导入pyzbar库
 from pyzxing import BarCodeReader  # 导入pyzxing库
 
+from PIL import Image
+import torch
+from transformers import CLIPSegProcessor, CLIPSegForImageSegmentation
+import gradio as gr
+
 print(cv.__version__)
 
 
@@ -106,6 +111,67 @@ def pyzxing_decode(image):
     # ]
 
     return qrcodes, points
+
+
+# 采用CLIPSeg模型识别二维码
+def initialize_clipseg():
+    processor = CLIPSegProcessor.from_pretrained("CIDAS/clipseg-rd64-refined")
+    model = CLIPSegForImageSegmentation.from_pretrained("CIDAS/clipseg-rd64-refined")
+    return processor, model
+
+
+def detect_qr_codes_with_clipseg(image_path, processor, model, prompt="QR code"):
+    image = Image.open(image_path).convert("RGB")
+    image_np = np.array(image)
+    inputs = processor(
+        text=[prompt], images=[image], padding="max_length", return_tensors="pt"
+    )
+    with torch.no_grad():
+        outputs = model(**inputs)
+    preds = torch.nn.functional.interpolate(
+        outputs.logits.unsqueeze(1),
+        size=(image_np.shape[0], image_np.shape[1]),
+        mode="bilinear",
+    )
+    preds = torch.sigmoid(preds).squeeze().cpu().numpy()
+    mask = (preds > 0.5).astype(np.uint8) * 255
+    return image_np, mask
+
+
+def overlay_mask(image, mask, alpha=0.5):
+    colored_mask = cv.applyColorMap(mask, cv.COLORMAP_JET)
+    overlay = cv.addWeighted(image, 1 - alpha, colored_mask, alpha, 0)
+    return overlay
+
+
+def crop_to_mask(image, mask):
+    coords = cv.findNonZero(mask)
+    x, y, w, h = cv.boundingRect(coords)
+    cropped_image = image[y : y + h, x : x + w]
+    return cropped_image
+
+
+def solo_crop_to_mask(image, mask, padding=10):
+    # 查找mask中的所有独立轮廓
+    contours, _ = cv.findContours(mask, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+
+    cropped_images = []
+
+    for contour in contours:
+        # 获取每个轮廓的边界框
+        x, y, w, h = cv.boundingRect(contour)
+
+        # 添加padding
+        x = max(x - padding, 0)
+        y = max(y - padding, 0)
+        w = min(w + 2 * padding, image.shape[1] - x)
+        h = min(h + 2 * padding, image.shape[0] - y)
+
+        # 裁剪图像
+        cropped_image = image[y : y + h, x : x + w]
+        cropped_images.append(cropped_image)
+
+    return cropped_images
 
 
 # 预处理图像
