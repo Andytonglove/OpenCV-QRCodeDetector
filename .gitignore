@@ -140,3 +140,4 @@ LICENSE
 video/
 *.avi
 *.mp4
+*ignore*.jpeg

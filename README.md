@@ -15,6 +15,7 @@ This is a `QRCode detector and decoder` using OpenCV and WeChatCV, used to detec
     - python QRCode_WeChatdetectAndDecode.py --input qrcode-file-tx-main/qrcode_video.mp4 --output qrcode-file-tx-main/qrcode_video_res.mp4 --save-txt qrcode-file-tx-main/result.txt
     - 增加滤波后效果反而不如之前的，增加pyzxing后
     python QRCode_WeChatdetectAndDecode.py --input ./images/QR-00042.jpg --output ./images/annotated-annotated_QR-00042.jpg --save-txt result_pyzxing.txt
+    - python QRCode_WeChatdetectAndDecode.py --input image.png --clipseg # add support for clip-segmentation
 
 
 # Requirement 
