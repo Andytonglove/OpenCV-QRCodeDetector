@@ -20,6 +20,12 @@ print(cv.__version__)
 
 
 def get_args():
+    """
+    Parse command line arguments and return the parsed arguments.
+
+    Returns:
+        argparse.Namespace: The parsed command line arguments.
+    """
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--device", type=int, default=0)
@@ -49,7 +55,17 @@ def get_args():
 
 # 通过pyzbar库识别二维码
 def decode_qrcode_with_pyzbar(image):
-    # 给pyzbar增加一个断言参数，防止出错？ymbols=[pyzbar.ZBarSymbol.QRCODE]
+    """
+    Decode QR codes in the given image using pyzbar library.
+
+    Args:
+        image: The image containing QR codes.
+
+    Returns:
+        A tuple containing the decoded QR codes and their corresponding points.
+
+    """
+    # 给pyzbar增加一个断言参数，防止警告？ymbols=[pyzbar.ZBarSymbol.QRCODE]
     decoded_objects = pyzbar.decode(image)
     qrcodes = []
     points = []
@@ -63,6 +79,17 @@ def decode_qrcode_with_pyzbar(image):
 
 # 集成pyzxing库识别二维码
 def pyzxing_decode(image):
+    """
+    Decodes QR codes from the given image using the pyzxing library.
+
+    Args:
+        image: The image containing the QR codes.
+
+    Returns:
+        A tuple containing two lists:
+        - qrcodes: A list of decoded QR codes as strings.
+        - points: A list of points representing the location of each QR code in the image.
+    """
     reader = BarCodeReader()
     results = reader.decode_array(image)
     for item in results:
@@ -115,12 +142,30 @@ def pyzxing_decode(image):
 
 # 采用CLIPSeg模型识别二维码
 def initialize_clipseg():
+    """
+    Initializes the CLIPSeg processor and model.
+
+    Returns:
+        Tuple: A tuple containing the CLIPSeg processor and model.
+    """
     processor = CLIPSegProcessor.from_pretrained("CIDAS/clipseg-rd64-refined")
     model = CLIPSegForImageSegmentation.from_pretrained("CIDAS/clipseg-rd64-refined")
     return processor, model
 
 
 def detect_qr_codes_with_clipseg(image_path, processor, model, prompt="QR code"):
+    """
+    Detects QR codes in an image using the CLIPSeg model.
+
+    Args:
+        image_path (str): The path to the image file.
+        processor: The CLIP processor used for text and image encoding.
+        model: The CLIPSeg model used for QR code detection.
+        prompt (str, optional): The prompt used for QR code detection. Defaults to "QR code".
+
+    Returns:
+        tuple: A tuple containing the original image and the binary mask of detected QR codes.
+    """
     image = Image.open(image_path).convert("RGB")
     image_np = np.array(image)
     inputs = processor(
@@ -139,12 +184,35 @@ def detect_qr_codes_with_clipseg(image_path, processor, model, prompt="QR code")
 
 
 def overlay_mask(image, mask, alpha=0.5):
+    """
+    Overlay a color mask on an image.
+
+    Args:
+        image (numpy.ndarray): The input image.
+        mask (numpy.ndarray): The color mask to overlay on the image.
+        alpha (float, optional): The transparency of the overlay. Defaults to 0.5.
+
+    Returns:
+        numpy.ndarray: The image with the color mask overlay.
+
+    """
     colored_mask = cv.applyColorMap(mask, cv.COLORMAP_JET)
     overlay = cv.addWeighted(image, 1 - alpha, colored_mask, alpha, 0)
     return overlay
 
 
 def crop_to_mask(image, mask):
+    """
+    Crop the input image based on the provided mask.
+
+    Parameters:
+    - image: The input image to be cropped.
+    - mask: The mask indicating the region to be cropped.
+
+    Returns:
+    - cropped_image: The cropped image.
+
+    """
     coords = cv.findNonZero(mask)
     x, y, w, h = cv.boundingRect(coords)
     cropped_image = image[y : y + h, x : x + w]
@@ -152,6 +220,18 @@ def crop_to_mask(image, mask):
 
 
 def solo_crop_to_mask(image, mask, padding=10):
+    """
+    Crop the image based on the provided mask and return a list of cropped images.
+
+    Args:
+        image (numpy.ndarray): The input image.
+        mask (numpy.ndarray): The mask indicating the regions of interest.
+        padding (int, optional): The padding to be added around the bounding box. Defaults to 10.
+
+    Returns:
+        list: A list of cropped images.
+
+    """
     # 查找mask中的所有独立轮廓
     contours, _ = cv.findContours(mask, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
 
@@ -176,6 +256,16 @@ def solo_crop_to_mask(image, mask, padding=10):
 
 # 预处理图像
 def preprocess_image(image):
+    """
+    Preprocesses the input image for QR code detection and decoding.
+
+    Args:
+        image: The input image to be preprocessed.
+
+    Returns:
+        The preprocessed image.
+
+    """
     # 转换为灰度图像
     gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
 
@@ -213,6 +303,16 @@ def preprocess_image(image):
 
 # 超分辨率，效果不好
 def super_res(image):
+    """
+    Applies super resolution to the input image using OpenCV's DNN super resolution model.
+
+    Parameters:
+    image (numpy.ndarray): The input image to be processed.
+
+    Returns:
+    numpy.ndarray: The super resolved image.
+
+    """
     # 使用OpenCV的DNN超分辨率模型
     sr = cv.dnn_superres.DnnSuperResImpl_create()
     sr.readModel("model/ESPCN_x3.pb")
@@ -221,7 +321,21 @@ def super_res(image):
     return result
 
 
+# 主函数
 def main():
+    """
+    Main function that performs QR code detection and decoding.
+
+    This function takes command line arguments, initializes the camera or input file,
+    prepares the QR code detector, and starts the detection and decoding process.
+    It also handles saving the output video and text file if specified.
+
+    Args:
+        None
+
+    Returns:
+        None
+    """
     # 参数解析 #################################################################
     args = get_args()
 
@@ -370,6 +484,21 @@ def main():
 
 # 每次勾画多个
 def draw_tags(image, qrcode_result, elapsed_time, total_qrcodes, current_qrcodes):
+    """
+    Draws bounding boxes and text labels on the input image based on the QR code detection results.
+
+    Args:
+        image (numpy.ndarray): The input image on which to draw the bounding boxes and text labels.
+        qrcode_result (tuple): A tuple containing the QR code detection results. It consists of two lists:
+                               the first list contains the text labels of the detected QR codes,
+                               and the second list contains the corner coordinates of the bounding boxes.
+        elapsed_time (float): The elapsed time for the QR code detection process in seconds.
+        total_qrcodes (int): The total number of QR codes detected in the image.
+        current_qrcodes (int): The number of QR codes currently being processed.
+
+    Returns:
+        numpy.ndarray: The input image with bounding boxes and text labels drawn on it.
+    """
     for i in range(len(qrcode_result[0])):
         text = qrcode_result[0][i]
         corner = qrcode_result[1][i]
@@ -456,8 +585,18 @@ def draw_tags(image, qrcode_result, elapsed_time, total_qrcodes, current_qrcodes
     return image
 
 
-# 实现目录处理
+# ADD: 实现目录处理
 def process_directory(input_dir, save_txt_path):
+    """
+    Process a directory containing images and detect QR codes in each image.
+
+    Args:
+        input_dir (str): The path to the directory containing the images.
+        save_txt_path (str): The path to save the detected QR codes in a text file.
+
+    Returns:
+        None
+    """
     qrcode_detector = cv.wechat_qrcode_WeChatQRCode(
         "model/detect.prototxt",
         "model/detect.caffemodel",
