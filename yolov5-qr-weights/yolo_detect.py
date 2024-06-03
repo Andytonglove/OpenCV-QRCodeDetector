@@ -5,9 +5,22 @@ import numpy as np
 
 
 def build_model(is_cuda):
+    """
+    Build and configure the YOLO model for QR code detection.
+
+    Required:
+    - best.onnx: The YOLO model file, which is a pre-trained model from best.pt.
+
+    Parameters:
+    - is_cuda (bool): Flag indicating whether to use CUDA for GPU acceleration.
+
+    Returns:
+    - net (cv2.dnn_Net): The configured YOLO model.
+
+    """
     net = cv2.dnn.readNet("best.onnx")
     if is_cuda:
-        print("Attempty to use CUDA")
+        print("Attempting to use CUDA")
         net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
         net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA_FP16)
     else:
@@ -33,8 +46,8 @@ def detect(image, net):
     return preds
 
 
-def load_capture():
-    capture = cv2.VideoCapture("sample.mp4")
+def load_capture(video_path):
+    capture = cv2.VideoCapture(video_path)
     return capture
 
 
@@ -105,20 +118,14 @@ def format_yolov5(frame):
     return result
 
 
-def process_image():
+def process_image(image_path):
     colors = [(255, 255, 0), (0, 255, 0), (0, 255, 255), (255, 0, 0)]
 
     is_cuda = len(sys.argv) > 1 and sys.argv[1] == "cuda"
 
     net = build_model(is_cuda)
-    capture = load_capture()
 
-    start = time.time_ns()
-    frame_count = 0
-    total_frames = 0
-    fps = -1
-
-    frame = cv2.imread("QR-00115.jpg")
+    frame = cv2.imread(image_path)
     inputImage = format_yolov5(frame)
     outs = detect(inputImage, net)
 
@@ -144,13 +151,13 @@ def process_image():
     cv2.destroyAllWindows()
 
 
-def process_video():
+def process_video(video_path):
     colors = [(255, 255, 0), (0, 255, 0), (0, 255, 255), (255, 0, 0)]
 
     is_cuda = len(sys.argv) > 1 and sys.argv[1] == "cuda"
 
     net = build_model(is_cuda)
-    capture = load_capture()
+    capture = load_capture(video_path)
 
     start = time.time_ns()
     frame_count = 0
@@ -211,5 +218,5 @@ def process_video():
 
 
 if __name__ == "__main__":
-    process_image()
-    process_video()
+    # process_image("D:\CodeWorkSpace\OpenCV-QRCodeDetector-Sample-main\image1.png")
+    process_video("D:\CodeWorkSpace\OpenCV-QRCodeDetector-Sample-main\QQ-video1.mp4")
