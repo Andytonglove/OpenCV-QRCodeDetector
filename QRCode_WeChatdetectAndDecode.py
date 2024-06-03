@@ -17,6 +17,7 @@ from transformers import CLIPSegProcessor, CLIPSegForImageSegmentation
 import gradio as gr
 
 print(cv.__version__)
+print(f"transformers version: {torch.__version__}")
 
 
 def get_args():
@@ -46,6 +47,12 @@ def get_args():
     )
     parser.add_argument(
         "--input-dir", type=str, help="path to input directory with images"
+    )
+    # 参数选择是否进行clipseg识别，该参数只能对图片进行识别，默认为False
+    parser.add_argument(
+        "--clipseg",
+        action="store_true",
+        help="Use CLIPSeg model for QR code detection",
     )
 
     args = parser.parse_args()
@@ -166,18 +173,24 @@ def detect_qr_codes_with_clipseg(image_path, processor, model, prompt="QR code")
     Returns:
         tuple: A tuple containing the original image and the binary mask of detected QR codes.
     """
+    # 读取图像
     image = Image.open(image_path).convert("RGB")
     image_np = np.array(image)
+
+    # 准备输入
     inputs = processor(
         text=[prompt], images=[image], padding="max_length", return_tensors="pt"
     )
     with torch.no_grad():
         outputs = model(**inputs)
+
+    # 获取分割结果
     preds = torch.nn.functional.interpolate(
         outputs.logits.unsqueeze(1),
         size=(image_np.shape[0], image_np.shape[1]),
         mode="bilinear",
     )
+    # 转换为掩码
     preds = torch.sigmoid(preds).squeeze().cpu().numpy()
     mask = (preds > 0.5).astype(np.uint8) * 255
     return image_np, mask
@@ -196,7 +209,10 @@ def overlay_mask(image, mask, alpha=0.5):
         numpy.ndarray: The image with the color mask overlay.
 
     """
+    # 将mask转换为彩色图像
     colored_mask = cv.applyColorMap(mask, cv.COLORMAP_JET)
+
+    # 叠加图像和掩码
     overlay = cv.addWeighted(image, 1 - alpha, colored_mask, alpha, 0)
     return overlay
 
@@ -213,8 +229,10 @@ def crop_to_mask(image, mask):
     - cropped_image: The cropped image.
 
     """
+    # 找到mask的非零像素的边界
     coords = cv.findNonZero(mask)
     x, y, w, h = cv.boundingRect(coords)
+    # 裁剪图像
     cropped_image = image[y : y + h, x : x + w]
     return cropped_image
 
@@ -346,6 +364,7 @@ def main():
     output_path = args.output
     save_txt_path = args.save_txt
     input_dir = args.input_dir
+    use_clipseg = args.clipseg
 
     cap = None  # 初始化cap
 
@@ -402,6 +421,10 @@ def main():
     else:
         txt_file = None
 
+    # 初始化CLIPSeg模型
+    if use_clipseg:
+        processor, model = initialize_clipseg()
+
     while True:
         start_time = time.time()
 
@@ -424,6 +447,43 @@ def main():
             result = decode_qrcode_with_pyzbar(image)
             # TODO: 增加pyzxing库识别二维码，可加三次优化四次识别
             # result = pyzxing_decode(image)
+
+        # TODO: 使用CLIPSeg模型识别二维码部分，只对单张图片进行处理
+        if use_clipseg and input_path.endswith(
+            (".png", ".jpg", ".jpeg", ".bmp", ".tiff")
+        ):
+            print("Using CLIPSeg model for QR code detection...")
+            image_np, mask = detect_qr_codes_with_clipseg(input_path, processor, model)
+
+            if mask is not None:
+                # 叠加掩码到原图像
+                overlay_image = overlay_mask(image_np, mask)
+                # 根据掩码裁剪图像
+                cropped_image = crop_to_mask(image_np, mask)
+                # 根据mask单独裁剪图像
+                solo_cropped_images = solo_crop_to_mask(image_np, mask, padding=10)
+
+                # 显示原图、掩码和叠加后的图像
+                # cv2.imshow("Original Image", image)
+                # cv2.imshow("QR Code Mask", mask)
+                cv.imshow("Overlay Image", overlay_image)
+                cv.imshow("Cropped Image", cropped_image)
+
+                print(f"total detected QR Code Masks: {len(solo_cropped_images)}")
+                if len(solo_cropped_images) > 1:
+                    for i, cropped_image in enumerate(solo_cropped_images):
+                        cv.imshow(f"Cropped Image {i+1}", cropped_image)
+
+                # 保存裁剪后的图像
+                # cv2.imwrite("Overlay_image.jpg", overlay_image)
+                # cv2.imwrite("cropped_image.jpg", cropped_image)
+                # 根据mask裁剪图像
+                cropped_images = solo_crop_to_mask(image_np, mask)
+                for idx, cropped_image in enumerate(cropped_images):
+                    cv.imwrite(f"cropped_output_{idx}.png", cropped_image)
+
+                cv.waitKey(0)
+                cv.destroyAllWindows()
 
         # 每一帧的统计 #########################################################
         current_qrcodes.clear()
@@ -480,6 +540,7 @@ def main():
     if txt_file:
         txt_file.close()
     cv.destroyAllWindows()
+    print(f"Total QR Codes detected: {len(seen_qrcodes)}")
 
 
 # 每次勾画多个
