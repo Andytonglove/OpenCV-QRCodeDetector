@@ -17,6 +17,14 @@ import torch
 
 print(cv.__version__)
 
+"""
+调用方法：
+python QRCode_WeChatdetectAndDecode.py --input-dir folder --save-txt result.txt
+python QRCode_WeChatdetectAndDecode.py --input image.jpg --output output.jpg --save-txt result.txt
+python QRCode_WeChatdetectAndDecode.py --input video.mp4 --output output.avi --save-txt result.txt
+python QRCode_WeChatdetectAndDecode.py --input image.jpg --clipseg
+"""
+
 
 def get_args():
     """
