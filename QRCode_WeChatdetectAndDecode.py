@@ -11,13 +11,11 @@ import numpy as np
 from pyzbar import pyzbar  # 导入pyzbar库
 from pyzxing import BarCodeReader  # 导入pyzxing库
 
+
 from PIL import Image
 import torch
-from transformers import CLIPSegProcessor, CLIPSegForImageSegmentation
-import gradio as gr
 
 print(cv.__version__)
-print(f"transformers version: {torch.__version__}")
 
 
 def get_args():
@@ -127,13 +125,13 @@ def pyzxing_decode(image):
         )
         points = item.get("points")
 
-        print(f"Filename: {filename}")
-        print(f"Format: {format}")
-        print(f"Type: {type_}")
-        print(f"Raw: {raw}")
-        print(f"Parsed: {parsed}")
-        print(f"Points: {points}")
-        print("\n")
+        # print(f"Filename: {filename}")
+        # print(f"Format: {format}")
+        # print(f"Type: {type_}")
+        # print(f"Raw: {raw}")
+        # print(f"Parsed: {parsed}")
+        # print(f"Points: {points}")
+        # print("\n")
 
     # 返回格式和pyzbar一样
     qrcodes = [item.get("parsed") for item in results]
@@ -155,6 +153,9 @@ def initialize_clipseg():
     Returns:
         Tuple: A tuple containing the CLIPSeg processor and model.
     """
+    # 中间再引入，可以加快速度
+    from transformers import CLIPSegProcessor, CLIPSegForImageSegmentation
+
     processor = CLIPSegProcessor.from_pretrained("CIDAS/clipseg-rd64-refined")
     model = CLIPSegForImageSegmentation.from_pretrained("CIDAS/clipseg-rd64-refined")
     return processor, model
@@ -270,6 +271,56 @@ def solo_crop_to_mask(image, mask, padding=10):
         cropped_images.append(cropped_image)
 
     return cropped_images
+
+
+def preprocess_for_qr(image):
+    """
+    Preprocesses an image for QR code detection.
+
+    Args:
+        image: The input image.
+
+    Returns:
+        The preprocessed image.
+
+    """
+    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    clahe = cv.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    equalized = clahe.apply(gray)
+    gamma = 1.2
+    lookUpTable = np.empty((1, 256), np.uint8)
+    for i in range(256):
+        lookUpTable[0, i] = np.clip(pow(i / 255.0, gamma) * 255.0, 0, 255)
+    gamma_corrected = cv.LUT(equalized, lookUpTable)
+    blurred = cv.GaussianBlur(gamma_corrected, (5, 5), 0)
+    adaptive_thresh = cv.adaptiveThreshold(
+        blurred, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2
+    )
+    return adaptive_thresh
+
+
+def second_stage_detection(cropped_images):
+    """
+    Perform second stage detection on a list of cropped images.
+
+    Args:
+        cropped_images (list): A list of cropped images.
+
+    Returns:
+        set: A set of detected QR codes from the second stage detection.
+    """
+    second_stage_qrcodes = set()
+    for cropped_image in cropped_images:
+        preprocessed_image = preprocess_for_qr(cropped_image)
+        # 使用不同的方法进行识别
+        qrcodes_pyzbar, _ = decode_qrcode_with_pyzbar(preprocessed_image)
+        qrcodes_pyzxing, _ = pyzxing_decode(preprocessed_image)
+
+        # 合并结果
+        second_stage_qrcodes.update(qrcodes_pyzbar)
+        second_stage_qrcodes.update(qrcodes_pyzxing)
+
+    return second_stage_qrcodes
 
 
 # 预处理图像
@@ -402,9 +453,10 @@ def main():
         "model/sr.caffemodel",
     )
 
-    elapsed_time = 0
+    elapsed_time = 0  # 初始化时间记录
     seen_qrcodes = set()  # 存储已识别的二维码内容
     current_qrcodes = set()  # 存储当前帧识别的二维码内容
+    # clipseg_qrcodes = set()  # 存储CLIPSeg识别的二维码内容
 
     if input_path and output_path:
         fourcc = cv.VideoWriter_fourcc(*"XVID")
@@ -423,6 +475,7 @@ def main():
 
     # 初始化CLIPSeg模型
     if use_clipseg:
+        print(f"transformers version: {torch.__version__}")
         processor, model = initialize_clipseg()
 
     while True:
@@ -448,43 +501,6 @@ def main():
             # TODO: 增加pyzxing库识别二维码，可加三次优化四次识别
             # result = pyzxing_decode(image)
 
-        # TODO: 使用CLIPSeg模型识别二维码部分，只对单张图片进行处理
-        if use_clipseg and input_path.endswith(
-            (".png", ".jpg", ".jpeg", ".bmp", ".tiff")
-        ):
-            print("Using CLIPSeg model for QR code detection...")
-            image_np, mask = detect_qr_codes_with_clipseg(input_path, processor, model)
-
-            if mask is not None:
-                # 叠加掩码到原图像
-                overlay_image = overlay_mask(image_np, mask)
-                # 根据掩码裁剪图像
-                cropped_image = crop_to_mask(image_np, mask)
-                # 根据mask单独裁剪图像
-                solo_cropped_images = solo_crop_to_mask(image_np, mask, padding=10)
-
-                # 显示原图、掩码和叠加后的图像
-                # cv2.imshow("Original Image", image)
-                # cv2.imshow("QR Code Mask", mask)
-                cv.imshow("Overlay Image", overlay_image)
-                cv.imshow("Cropped Image", cropped_image)
-
-                print(f"total detected QR Code Masks: {len(solo_cropped_images)}")
-                if len(solo_cropped_images) > 1:
-                    for i, cropped_image in enumerate(solo_cropped_images):
-                        cv.imshow(f"Cropped Image {i+1}", cropped_image)
-
-                # 保存裁剪后的图像
-                # cv2.imwrite("Overlay_image.jpg", overlay_image)
-                # cv2.imwrite("cropped_image.jpg", cropped_image)
-                # 根据mask裁剪图像
-                cropped_images = solo_crop_to_mask(image_np, mask)
-                for idx, cropped_image in enumerate(cropped_images):
-                    cv.imwrite(f"cropped_output_{idx}.png", cropped_image)
-
-                cv.waitKey(0)
-                cv.destroyAllWindows()
-
         # 每一帧的统计 #########################################################
         current_qrcodes.clear()
         for text in result[0]:
@@ -496,6 +512,8 @@ def main():
                     # print(f"QR Code detected at: {result[1][0]}")
                     if txt_file:
                         txt_file.write(text + "\n")
+                else:
+                    print(f"Duplicate QR Code detected: {text}")
 
         debug_image = draw_tags(
             debug_image, result, elapsed_time, len(seen_qrcodes), len(current_qrcodes)
@@ -518,6 +536,51 @@ def main():
         elapsed_time = time.time() - start_time
         if input_path and out:
             out.write(debug_image)
+
+        # #####################################################################
+        # TODO: 使用CLIPSeg模型识别二维码部分，只对单张图片进行处理
+        if use_clipseg and input_path.endswith(
+            (".png", ".jpg", ".jpeg", ".bmp", ".tiff")
+        ):
+            # 计算使用opencv识别的二维码数量
+            opencv_detect_qrcode = len(result[0])
+            cilpseg_detect_qrcode = 0
+            print("Using CLIPSeg model for QR code detection...")
+            image_np, mask = detect_qr_codes_with_clipseg(input_path, processor, model)
+
+            if mask is not None:
+                # 叠加掩码到原图像
+                overlay_image = overlay_mask(image_np, mask)
+                # 根据掩码裁剪图像
+                cropped_image = crop_to_mask(image_np, mask)
+                # 根据mask单独裁剪图像
+                solo_cropped_images = solo_crop_to_mask(image_np, mask, padding=10)
+
+                # 显示原图、掩码和叠加后的图像，保存 裁剪……
+                cv.imwrite("overlay_image.jpg", overlay_image)
+
+                print(f"total detected QR Code Masks: {len(solo_cropped_images)}")
+                # 计算显示裁剪后的单个图像
+                if len(solo_cropped_images) >= 1:
+                    # for i, cropped_image in enumerate(solo_cropped_images):
+                    # cv.imshow(f"Cropped Image {i+1}", cropped_image)
+                    # cv.imwrite(f"cropped_output_{i+1}.png", cropped_image)
+                    # 做第二阶段检测 solo_cropped_images
+                    cilpseg_detect_qrcode = (
+                        len(solo_cropped_images) - opencv_detect_qrcode
+                    )
+                    print(
+                        f"Maybe ignore QR Codes: {cilpseg_detect_qrcode if cilpseg_detect_qrcode > 0 else 0}"
+                    )
+                    clipseg_qrcodes = second_stage_detection(solo_cropped_images)
+                    for text in clipseg_qrcodes:
+                        if text:
+                            print(f"QR Code detected in second stage: {text}")
+                            # 在seen_qrcodes中查找，如果没有则输出并添加到seen_qrcodes
+                            if text not in seen_qrcodes:
+                                seen_qrcodes.add(text)
+                                if txt_file:
+                                    txt_file.write(text + "\n")
 
         # 按键处理(ESC：结束) ##################################################
         key = cv.waitKey(1)
