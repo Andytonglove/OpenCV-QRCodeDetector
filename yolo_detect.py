@@ -5,6 +5,8 @@ import numpy as np
 
 import argparse
 
+import QRCode_WeChatdetectAndDecode as decode
+
 
 def get_args():
     """
@@ -44,11 +46,11 @@ def build_model(is_cuda):
     """
     net = cv2.dnn.readNet("model/best.onnx")
     if is_cuda:
-        print("Attempting to use CUDA")
+        # print("Attempting to use CUDA")
         net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
         net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA_FP16)
     else:
-        print("Running on CPU")
+        # print("Running on CPU")
         net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
         net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
     return net
@@ -188,7 +190,7 @@ def format_yolov5(frame):
     return result
 
 
-def process_image(image_path):
+def process_image(image_path, output_path="output.jpg"):
     colors = [(255, 255, 0), (0, 255, 0), (0, 255, 255), (255, 0, 0)]
 
     is_cuda = len(sys.argv) > 1 and sys.argv[1] == "cuda"
@@ -202,6 +204,9 @@ def process_image(image_path):
     class_ids, confidences, boxes = wrap_detection(inputImage, outs[0])
 
     qr_regions = []
+    regions_result = []
+    idx = 0  # QR Region index
+    cnt_qrcodes = set()
 
     for classid, confidence, box in zip(class_ids, confidences, boxes):
         color = colors[int(classid) % len(colors)]
@@ -209,27 +214,41 @@ def process_image(image_path):
         cv2.rectangle(
             frame, (box[0], box[1] - 20), (box[0] + box[2], box[1]), color, -1
         )
+
+        # Extract the QR code region and save it to the list
+        qr_region = frame[box[1] : box[1] + box[3], box[0] : box[0] + box[2]]
+        qr_regions.append(qr_region)
+
+        # 使用subprocess调用QRCode_WeChatdetectAndDecode.py
+        result = decode.sub_process(qr_region)
         cv2.putText(
             frame,
-            class_list[classid],
+            class_list[classid] + ": " + str(result[0]) if len(result) > 0 else None,
             (box[0], box[1] - 10),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.5,
             (0, 0, 0),
         )
-        # Extract the QR code region and save it to the list
-        qr_region = frame[box[1] : box[1] + box[3], box[0] : box[0] + box[2]]
-        qr_regions.append(qr_region)
+        for text in result[0]:
+            if text:
+                if text not in cnt_qrcodes:
+                    cnt_qrcodes.add(text)
+                    print(f"New QR Code detected: {text}")
+                    print(f"QR Code detected at: {result[1][0]}")
+                else:
+                    print(f"Duplicate QR Code detected: {text}")
+        regions_result.append(result)
+        # print("QR Region " + str(idx + 1) + ":", result)
+        # cv2.imshow("QR Region " + str(idx + 1), qr_region)
+        idx += 1
 
-    cv2.imshow("output", frame)
-
-    # 对保存到qr_regions的QR码区域进行展示
-    for i, qr_region in enumerate(qr_regions):
-        # 同时展示所有的QR码区域
-        cv2.imshow("QR Region " + str(i), qr_region)
+    cv2.imshow("output-detect and decode", frame)
+    cv2.imwrite(output_path, frame)
 
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+
+    return qr_regions
 
 
 def process_video(video_path, output_path="output.mp4"):
@@ -318,7 +337,10 @@ if __name__ == "__main__":
     args = get_args()
     if args.input:
         if args.input.endswith(".jpg") or args.input.endswith(".png"):
-            process_image(args.input)
+            if args.output:
+                process_image(args.input, args.output)
+            else:
+                process_image(args.input)
         elif args.input.endswith(".mp4") or args.input.endswith(".avi"):
             if args.output:
                 process_video(args.input, args.output)
@@ -328,6 +350,3 @@ if __name__ == "__main__":
             print("Invalid file type. Supported types: jpg, png, mp4, avi")
     else:
         print("No input file provided.")
-
-    # process_image("D:\CodeWorkSpace\OpenCV-QRCodeDetector-Sample-main\image1.png")
-    # process_video("D:\CodeWorkSpace\OpenCV-QRCodeDetector-Sample-main\QQ-video1.mp4")

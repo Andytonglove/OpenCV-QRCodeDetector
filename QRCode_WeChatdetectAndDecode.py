@@ -785,5 +785,52 @@ def process_directory(input_dir, save_txt_path):
     print(f"Total QR Codes detected: {len(seen_qrcodes)}")
 
 
+def sub_process(image, use_clipseg=False):
+    """
+    sub_process function performs the following tasks:
+
+    Input: Image that has been read using cv2.
+    Output: Tuple containing the decoded QR code information, including the QR code image, content, and position.
+    Processing: The processing is similar to the processing in the main function.
+
+    Parameters:
+    - image: The image to be processed.
+    - use_clipseg: A boolean indicating whether to use the CLIPSeg model for QR code detection.
+
+    Returns:
+    - result: A tuple containing the decoded QR code information. The first element of the tuple indicates whether a QR code was detected or not.
+    If a QR code was detected, the second element contains the decoded content, and the third element contains the position of the QR code in the image.
+
+    """
+    qrcode_detector = cv.wechat_qrcode_WeChatQRCode(
+        "model/detect.prototxt",
+        "model/detect.caffemodel",
+        "model/sr.prototxt",
+        "model/sr.caffemodel",
+    )
+
+    result = qrcode_detector.detectAndDecode(image)
+    if not result[0]:
+        result = decode_qrcode_with_pyzbar(image)
+
+    # 使用CLIPSeg模型识别二维码
+    if use_clipseg:
+        processor, model = initialize_clipseg()
+        image_np, mask = detect_qr_codes_with_clipseg(image, processor, model)
+        result_clipseg = (False, None, None)
+        if mask is not None:
+            overlay_image = overlay_mask(image_np, mask)
+            cropped_image = crop_to_mask(image_np, mask)
+            solo_cropped_images = solo_crop_to_mask(image_np, mask, padding=10)
+
+            if len(solo_cropped_images) >= 1:
+                clipseg_qrcodes = second_stage_detection(solo_cropped_images)
+                result_clipseg = (True, clipseg_qrcodes, None)
+
+        result = result.update(result_clipseg)
+
+    return result
+
+
 if __name__ == "__main__":
     main()
