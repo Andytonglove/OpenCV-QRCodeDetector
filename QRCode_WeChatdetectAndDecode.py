@@ -818,6 +818,9 @@ def sub_process(image, use_clipseg=False):
         text = result[0][i]
         corner = result[1][i]
 
+        if corner is None or len(corner) < 2:
+            continue
+
         corner_01 = (int(corner[0][0]), int(corner[0][1]))
         corner_02 = (int(corner[1][0]), int(corner[1][1]))
         corner_03 = (int(corner[2][0]), int(corner[2][1]))

@@ -303,6 +303,13 @@ def process_video(video_path, output_path="output.mp4"):
 
             # Extract the QR code region and save it to the list
             qr_region = frame[box[1] : box[1] + box[3], box[0] : box[0] + box[2]]
+
+            if qr_region.size == 0 or qr_region is None:
+                print(
+                    f"Empty QR code region detected at frame {total_frames}. Skipping."
+                )
+                continue
+
             qr_regions.append(qr_region)
             # 使用subprocess调用QRCode_WeChatdetectAndDecode.py
             result = decode.sub_process(qr_region)
