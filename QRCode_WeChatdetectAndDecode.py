@@ -813,6 +813,70 @@ def sub_process(image, use_clipseg=False):
     if not result[0]:
         result = decode_qrcode_with_pyzbar(image)
 
+    # draw_tags(image, result)
+    for i in range(len(result[0])):
+        text = result[0][i]
+        corner = result[1][i]
+
+        corner_01 = (int(corner[0][0]), int(corner[0][1]))
+        corner_02 = (int(corner[1][0]), int(corner[1][1]))
+        corner_03 = (int(corner[2][0]), int(corner[2][1]))
+        corner_04 = (int(corner[3][0]), int(corner[3][1]))
+
+        # 各边勾画
+        cv.line(
+            image,
+            (corner_01[0], corner_01[1]),
+            (corner_02[0], corner_02[1]),
+            (255, 0, 0),
+            2,
+        )
+        cv.line(
+            image,
+            (corner_02[0], corner_02[1]),
+            (corner_03[0], corner_03[1]),
+            (255, 0, 0),
+            2,
+        )
+        cv.line(
+            image,
+            (corner_03[0], corner_03[1]),
+            (corner_04[0], corner_04[1]),
+            (0, 255, 0),
+            2,
+        )
+        cv.line(
+            image,
+            (corner_04[0], corner_04[1]),
+            (corner_01[0], corner_01[1]),
+            (0, 255, 0),
+            2,
+        )
+
+        # 文本
+        cv.putText(
+            image,
+            str(text),
+            (corner_01[0], corner_01[1] - 10),
+            cv.FONT_HERSHEY_SIMPLEX,
+            0.75,
+            (0, 255, 0),
+            2,
+            cv.LINE_AA,
+        )
+
+    # 信息
+    # cv.putText(
+    #     image,
+    #     "Total QR Codes: " + str(total_qrcodes),
+    #     (10, 60),
+    #     cv.FONT_HERSHEY_SIMPLEX,
+    #     0.8,
+    #     (0, 255, 0),
+    #     2,
+    #     cv.LINE_AA,
+    # )
+
     # 使用CLIPSeg模型识别二维码
     if use_clipseg:
         processor, model = initialize_clipseg()

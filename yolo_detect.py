@@ -270,8 +270,14 @@ def process_video(video_path, output_path="output.mp4"):
 
     start = time.time_ns()
     frame_count = 0
-    total_frames = 0
+    total_frames = 0  # 记录总帧数
     # fps = -1
+
+    # 视频逻辑
+    qr_regions = []
+    regions_result = []
+    idx = 0  # QR Region index
+    cnt_qrcodes = set()
 
     while True:
 
@@ -294,14 +300,37 @@ def process_video(video_path, output_path="output.mp4"):
             cv2.rectangle(
                 frame, (box[0], box[1] - 20), (box[0] + box[2], box[1]), color, -1
             )
+
+            # Extract the QR code region and save it to the list
+            qr_region = frame[box[1] : box[1] + box[3], box[0] : box[0] + box[2]]
+            qr_regions.append(qr_region)
+            # 使用subprocess调用QRCode_WeChatdetectAndDecode.py
+            result = decode.sub_process(qr_region)
+
             cv2.putText(
                 frame,
-                class_list[classid],
+                (
+                    class_list[classid] + ": " + str(result[0])
+                    if len(result) > 0
+                    else None
+                ),
                 (box[0], box[1] - 10),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.5,
                 (0, 0, 0),
             )
+            for text in result[0]:
+                if text:
+                    if text not in cnt_qrcodes:
+                        cnt_qrcodes.add(text)
+                        print(f"New QR Code detected: {text}")
+                        print(f"QR Code detected at: {result[1][0]}")
+                    else:
+                        print(f"Duplicate QR Code detected: {text}")
+            regions_result.append(result)
+            # print("QR Region " + str(idx + 1) + ":", result)
+            # cv2.imshow("QR Region " + str(idx + 1), qr_region)
+            idx += 1
 
         if frame_count >= 30:
             end = time.time_ns()

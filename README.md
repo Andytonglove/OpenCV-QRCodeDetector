@@ -16,7 +16,7 @@ This is a `QRCode detector and decoder` using OpenCV and WeChatCV, used to detec
     - 增加滤波后效果反而不如之前的，增加pyzxing后
     python QRCode_WeChatdetectAndDecode.py --input ./images/QR-00042.jpg --output ./images/annotated-annotated_QR-00042.jpg --save-txt result_pyzxing.txt
     - python QRCode_WeChatdetectAndDecode.py --input image.png --clipseg # add support for clip-segmentation
-    - python yolo_detect.py --input image2.jpg # use trained yolo model to detect QRCode
+    - python yolo_detect.py --input image2.jpg # use trained yolo model to detect QRCode, best result performance
 
 
 # Requirement 
