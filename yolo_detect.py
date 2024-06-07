@@ -191,6 +191,17 @@ def format_yolov5(frame):
 
 
 def process_image(image_path, output_path="output.jpg"):
+    """
+    Process an image to detect and decode QR codes.
+
+    Args:
+        image_path (str): The path to the input image file.
+        output_path (str, optional): The path to save the output image file. Defaults to "output.jpg".
+
+    Returns:
+        list: A list of QR code regions extracted from the image.
+
+    """
     colors = [(255, 255, 0), (0, 255, 0), (0, 255, 255), (255, 0, 0)]
 
     is_cuda = len(sys.argv) > 1 and sys.argv[1] == "cuda"
@@ -252,6 +263,20 @@ def process_image(image_path, output_path="output.jpg"):
 
 
 def process_video(video_path, output_path="output.mp4"):
+    """
+    Process a video file and detect QR codes using YOLO object detection.
+
+    Args:
+        video_path (str): The path to the input video file.
+        output_path (str, optional): The path to save the output video file. Defaults to "output.mp4".
+
+    Returns:
+        None
+
+    Raises:
+        None
+    """
+
     colors = [(255, 255, 0), (0, 255, 0), (0, 255, 255), (255, 0, 0)]
 
     is_cuda = len(sys.argv) > 1 and sys.argv[1] == "cuda"
@@ -280,7 +305,7 @@ def process_video(video_path, output_path="output.mp4"):
     cnt_qrcodes = set()
 
     while True:
-
+        # Read frame from the video
         _, frame = capture.read()
         if frame is None:
             print("End of stream")

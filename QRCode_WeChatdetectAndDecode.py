@@ -15,7 +15,7 @@ from pyzxing import BarCodeReader  # 导入pyzxing库
 from PIL import Image
 import torch
 
-print(cv.__version__)
+# print(cv.__version__) # 4.9.0
 
 """
 调用方法：
