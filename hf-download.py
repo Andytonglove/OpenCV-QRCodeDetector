@@ -19,6 +19,7 @@ import os
 3. run at http://0.0.0.0:7860, remote at http://125.220.157.228:7860/
 """
 
+# 最稳定的hf本地下载方法
 # 设置环境变量为镜像站
 os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 
